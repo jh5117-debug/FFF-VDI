@@ -1,7 +1,10 @@
 pretrained_model_name_or_path: "stabilityai/stable-video-diffusion-img2vid-xt-1-1"
 
 # dataset
-data_root: "/SSD1/dataset/youtube-vos"
+data_root: "/data/fff_vdi/youtube-vos/JPEGImages"  #周哥到时候把数据放到你的路劲下,
+# 训练前请把 config.yaml 里的 data_root 改成你本地 YouTube-VOS JPEGImages 所在的路径。
+# 你在 HPC 上真正的数据可能长这样：
+# /scratch/hongyou/datasets/youtube-vos/JPEGImages   只需要把这一行手动改掉即可
 width: 512
 height: 256
 num_frames: 25

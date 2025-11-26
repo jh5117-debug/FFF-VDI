@@ -1,0 +1,24 @@
+# 基础科学计算
+numpy>=1.22
+
+# 配置 / 解析
+PyYAML>=6.0
+packaging>=23.0
+
+# 进度条
+tqdm>=4.64
+
+# 图像 / 视频处理
+Pillow>=9.0
+opencv-python>=4.8.0
+
+# HuggingFace 生态
+accelerate>=0.25.0
+transformers>=4.40.0
+diffusers>=0.29.0
+huggingface-hub>=0.22.0
+einops>=0.7.0
+
+# PyTorch / TorchVision 建议单独根据 GPU 环境安装：
+# torch==2.3.0+cu121
+# torchvision==0.18.0+cu121
