@@ -104,10 +104,35 @@ huggingface-cli login
 
 FFF-VDI 使用 YouTube-VOS 训练集。只需 RGB 帧；掩码（Masks）会在训练时动态生成。
 
-### 预期目录结构
+### 4.1 申请与下载
+
+请在浏览器中访问 YouTube-VOS 官网：
+[https://youtube-vos.org/dataset/vos/](https://youtube-vos.org/dataset/vos/)
+
+使用 **学校或实验室邮箱** 注册并申请下载权限。审核通过后，使用官网提供的链接在集群上下载并解压。
+
+**操作示例：**
+
+```bash
+# 1. 创建存放目录（具体路径请根据集群实际情况自定义）
+mkdir -p /gpfs/data/YouTubeVOS
+cd /gpfs/data/YouTubeVOS
+
+# 2. 下载数据
+# 使用 wget/curl 或 scp 把官网给的 zip/tar 下载过来
+# wget <官网提供的下载链接>
+
+# 3. 解压并整理
+# 解压后需整理成如下结构：
+# youtube-vos/JPEGImages/00a23ccf53/00000.jpg ...
+```
+
+### 4.2 目录结构确认
+
+请确保您的数据目录结构如下所示：
 
 ```text
-DATA_ROOT/
+/gpfs/data/YouTubeVOS/       <-- 你的数据根目录
   youtube-vos/
     JPEGImages/
       00a23ccf53/
@@ -121,30 +146,19 @@ DATA_ROOT/
       ...
 ```
 
-- `JPEGImages/` 下的每个子文件夹对应一个视频。
-- 帧文件按顺序命名为 5 位数字的 `.jpg` 文件。
+### 4.3 修改配置
 
-### 修改配置
-
-在此 Fork 中，数据集路径在 `config.yaml` 中配置：
+在项目根目录下的 `config.yaml` 中，将 `data_root` 修改为您的实际路径：
 
 ```yaml
 # config.yaml
 
 # dataset
-data_root: "/data/fff_vdi/youtube-vos/JPEGImages"   # <<< 修改此处
+data_root: "/gpfs/data/YouTubeVOS/youtube-vos/JPEGImages"   # <<< 修改此处
 width: 512
 height: 256
 num_frames: 25
 ```
-
-请将 `data_root` 更改为集群上 `JPEGImages` 的绝对路径，例如：
-
-```yaml
-data_root: "/gpfs/data/YouTubeVOS/youtube-vos/JPEGImages"
-```
-
-其他训练超参数（Batch size, 学习率, 步数等）也在 `config.yaml` 中定义，可根据需要进行微调。
 
 ---
 
