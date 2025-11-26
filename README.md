@@ -55,18 +55,15 @@
 ```bash
 # 克隆此 fork 仓库
 git clone [https://github.com/jh5117-debug/FFF-VDI.git](https://github.com/jh5117-debug/FFF-VDI.git)
-cd FFF-VDI/FFF-VDI
+cd FFF-VDI
 
-# 创建并激活 Conda 环境
-conda create -n fff-vdi python=3.10
+# 1. 运行一键环境配置脚本
+# 该脚本会自动创建 conda 环境并安装 torch 及 requirements.txt 中的依赖
+bash scripts/setup_env.sh
+
+# 2. 激活环境
 conda activate fff-vdi
-
-# 安装所有依赖项 (torch, diffusers, transformers 等)
-pip install -r requirements.txt
-```
-
-> **注意：** `requirements.txt` 是从一个可正常工作的训练环境中生成的，包含固定版本的 PyTorch, Diffusers, Transformers 等。在某些集群上，您可能需要调整 torch / CUDA 版本以匹配本地策略。
-
+注意： scripts/setup_env.sh 会自动处理 Python 版本及依赖安装。如果遇到权限问题，请确保该脚本具有执行权限 (chmod +x scripts/setup_env.sh)。
 ---
 
 ## 3. 获取 Stable Video Diffusion 权限 (Hugging Face)
