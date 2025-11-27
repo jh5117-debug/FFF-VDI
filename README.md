@@ -1,224 +1,96 @@
-<div align="center">
+# FFF-VDI Training on HPC Cluster
 
-<h3>Video Diffusion Models are Strong Video Inpainter (FFF-VDI)</h3>
-
-<a href="https://arxiv.org/abs/2408.11402">
-  <img src="https://img.shields.io/badge/ArXiv-2408.11402-red" />
-</a>
-
-<br/><br/>
-
-<div>
-    <a href="https://hydragon.co.kr" target="_blank">Minhyeok Lee <sup>1</sup></a>&emsp;
-    <a href="https://suhwan-cho.github.io" target="_blank">Suhwan Cho <sup>1</sup></a>&emsp;
-    <a target="_blank">Chajin Shin <sup>1</sup></a>&emsp;
-    <a href="https://jho-yonsei.github.io" target="_blank">Jungho Lee <sup>1</sup></a>&emsp;
-    <a target="_blank">Sunghun Yang <sup>1</sup></a>&emsp;
-    <a target="_blank">Sangyoun Lee <sup>1</sup></a>&emsp;
-</div>
-
-<br/>
-
-<div>
-  <sup>1</sup> 延世大学 (Yonsei University)
-</div>
-
-<br/>
-
-<i><strong><a href="https://aaai.org/conference/aaai/aaai-25/" target="_blank">AAAI 2025</a></strong></i>
-
-<br/><br/>
-</div>
-
-> **Fork 说明**
->
-> 本项目是 [Hydragon516/FFF-VDI](https://github.com/Hydragon516/FFF-VDI) 的 **非官方 Fork 版本**，专门针对 **H100 GPU 集群** 训练进行了适配。
-> 核心模型和训练逻辑遵循原始实现；此 Fork 主要增加了锁定的依赖版本以及针对高性能计算（HPC）环境的简要说明。
+本仓库包含 FFF-VDI 模型的训练代码，已针对 HPC 集群环境（Slurm + Conda）进行了自动化封装。
+管理员/用户仅需少量配置即可实现一键环境构建、数据下载与训练启动。
 
 ---
 
-## 1. 先决条件 (Prerequisites)
+## 🚀 快速开始 (Quick Start)
 
-要在 H100 集群上训练 FFF-VDI，您需要：
-
-- 至少一个多 GPU 节点（例如：8张 H100 80GB 显卡），并安装了较新的 NVIDIA 驱动。
-- `git` 和 **Conda** (Anaconda / Miniconda)。
-- 一个 [Hugging Face](https://huggingface.co/) 账号，且拥有访问 `stabilityai/stable-video-diffusion-img2vid-xt-1-1` 的权限。
-- 训练节点需具备 **出站互联网访问权限**（用于首次下载预训练的主干网络）。
-
----
-
-## 2. 代码库与环境配置
-
-以下所有命令均应在调度程序分配的 **GPU 节点内部** 运行（例如在 Slurm job 中）。
-
+### 1. 克隆代码
 ```bash
-# 克隆此 fork 仓库
 git clone [https://github.com/jh5117-debug/FFF-VDI.git](https://github.com/jh5117-debug/FFF-VDI.git)
 cd FFF-VDI
-
-# 1. 运行一键环境配置脚本
-# 该脚本会自动创建 conda 环境并安装 torch 及 requirements.txt 中的依赖
-bash scripts/setup_env.sh
-
-# 2. 激活环境
-conda activate fff-vdi
 ```
 
-> **注意：** `scripts/setup_env.sh` 会自动处理 Python 版本及依赖安装。如果遇到权限问题，请确保该脚本具有执行权限 (`chmod +x scripts/setup_env.sh`)。
+### 2. 修改配置 (关键步骤)
+在提交作业前，请务必根据集群实际情况修改以下两个文件中的路径和资源设置。
 
----
-
-## 3. 获取 Stable Video Diffusion 权限 (Hugging Face)
-
-FFF-VDI 使用受门控限制（Gated）的 Stable Video Diffusion 模型作为 img2vid 主干：
-`stabilityai/stable-video-diffusion-img2vid-xt-1-1`。
-
-### 3.1 在浏览器中操作
-
-1. 打开 [https://huggingface.co/stabilityai/stable-video-diffusion-img2vid-xt-1-1](https://huggingface.co/stabilityai/stable-video-diffusion-img2vid-xt-1-1)。
-2. 登录您的 Hugging Face 账号。
-3. 滚动到许可/条款部分，同意条款，填写简短表单（例如用途填写：“Academic non-commercial research / video inpainting”），然后提交。
-4. 前往 **Settings (设置)** → **Access Tokens (访问令牌)**，创建一个具有 **Read (读取)** 权限的新令牌（建议命名为 `fff-vdi-h100`）。
-5. 复制该令牌字符串。
-
-### 3.2 在集群上操作
-
-在 H100 节点上，确保护境已激活并登录：
+#### A. 修改 Slurm 脚本 (`slurm/train_fff_vdi_8gpu.sbatch`)
+打开文件，关注顶部的 `#SBATCH` 设置和中间的 `DATA_ROOT_BASE` 变量。
 
 ```bash
-conda activate fff-vdi
+# --- 资源设置 ---
+#SBATCH --partition=gpu          <-- [必改] 修改为您集群的 GPU 分区名
+#SBATCH --gres=gpu:8             <-- [可选] 修改 GPU 数量
+# ...
 
-# 如果尚未安装 CLI 工具
-pip install "huggingface_hub[cli]"
-
-# 登录 (在此处粘贴您的令牌)
-huggingface-cli login
+# --- 数据路径设置 ---
+# 脚本会自动在此目录下创建 youtube-vos/JPEGImages 并下载数据
+# 如果您没有 /gpfs/data 的写入权限，请改为您的个人目录 (e.g., /scratch/user/data)
+DATA_ROOT_BASE="/gpfs/data/YouTubeVOS"   <-- [必改] 修改为您希望存放数据的目录
 ```
 
-若看到 `Login successful` 即表示成功。令牌将存储在您的主目录下，Diffusers / Transformers 库会自动调用它。
+> **注意**：脚本会自动运行 `mkdir -p` 创建该目录，不需要手动新建文件夹。
 
----
-
-## 4. 数据集准备 (YouTube-VOS)
-
-FFF-VDI 使用 YouTube-VOS 训练集。只需 RGB 帧；掩码（Masks）会在训练时动态生成。
-
-### 4.1 申请与下载
-
-请在浏览器中访问 YouTube-VOS 官网：
-[https://youtube-vos.org/dataset/vos/](https://youtube-vos.org/dataset/vos/)
-
-使用 **学校或实验室邮箱** 注册并申请下载权限。审核通过后，使用官网提供的链接在集群上下载并解压。
-
-**操作示例：**
-
-```bash
-# 1. 创建存放目录（具体路径请根据集群实际情况自定义）
-mkdir -p /gpfs/data/YouTubeVOS
-cd /gpfs/data/YouTubeVOS
-
-# 2. 下载数据
-# 使用 wget/curl 或 scp 把官网给的 zip/tar 下载过来
-# wget <官网提供的下载链接>
-
-# 3. 解压并整理
-# 解压后需整理成如下结构：
-# youtube-vos/JPEGImages/00a23ccf53/00000.jpg ...
-```
-
-### 4.2 目录结构确认
-
-请确保您的数据目录结构如下所示：
-
-```text
-/gpfs/data/YouTubeVOS/       <-- 你的数据根目录
-  youtube-vos/
-    JPEGImages/
-      00a23ccf53/
-        00000.jpg
-        00001.jpg
-        ...
-      00ad5016a4/
-        00000.jpg
-        00001.jpg
-        ...
-      ...
-```
-
-### 4.3 修改配置
-
-在项目根目录下的 `config.yaml` 中，将 `data_root` 修改为您的实际路径：
+#### B. 同步修改配置文件 (`config.yaml`)
+确保 `config.yaml` 里的 `data_root` 与上面的路径保持一致。
 
 ```yaml
-# config.yaml
-
 # dataset
-data_root: "/gpfs/data/YouTubeVOS/youtube-vos/JPEGImages"   # <<< 修改此处
-width: 512
-height: 256
-num_frames: 25
+# 请确保这里的路径 = $DATA_ROOT_BASE/youtube-vos/JPEGImages
+data_root: "/gpfs/data/YouTubeVOS/youtube-vos/JPEGImages"  <-- [必改] 需与 Slurm 脚本一致
+```
+
+### 3. 一键启动
+配置修改完成后，直接提交作业：
+
+```bash
+sbatch slurm/train_fff_vdi_8gpu.sbatch
 ```
 
 ---
 
-## 5. 配置 Accelerate
+## 🛠️ 脚本自动化流程说明
 
-在 `fff-vdi` 环境中运行一次配置向导：
+运行 `sbatch` 后，脚本将按顺序自动执行以下操作：
 
-```bash
-conda activate fff-vdi
-accelerate config
-```
+1.  **环境检查**：
+    * 检查是否存在名为 `fff-vdi` 的 Conda 环境。
+    * **如果不存在**：自动调用 `scripts/setup_env.sh` 创建环境并安装 PyTorch 及依赖。
+    * **如果存在**：自动激活环境。
 
-**针对 8x H100 节点的建议选项：**
+2.  **数据准备**：
+    * 检查 `data_root` 下是否已有数据。
+    * **如果不存在**：自动调用 `scripts/download_youtubevos_2019.sh`。
+    * 该脚本会使用 Hugging Face 公共镜像（无需 Token）下载 YouTube-VOS 2019 数据集 (`train.zip`)，解压并自动整理目录结构。
 
-- **Compute environment:** This machine
-- **Distributed mode:** MULTI GPU
-- **Number of processes:** 8
-- **Number of machines:** 1
-- **Mixed precision:** fp16
-
-这将在 `~/.cache/huggingface/accelerate/default_config.yaml` 生成配置文件，`accelerate launch` 将复用此配置。
+3.  **开始训练**：
+    * 自动调用 `accelerate launch` 启动分布式训练。
+    * 日志将输出到 `logs/` 目录下。
 
 ---
 
-## 6. 训练命令 (H100 节点)
+## 📂 目录结构示例
 
-完成上述步骤后，即可启动训练：
+脚本执行完毕后，您的数据目录结构将如下所示：
 
-```bash
-conda activate fff-vdi
-cd FFF-VDI  # 确保在项目根目录
-
-accelerate launch train.py
+```text
+YOUR_DATA_ROOT/             (例如 /gpfs/data/YouTubeVOS)
+└── youtube-vos/
+    └── JPEGImages/
+        ├── 00a23ccf53/     (视频帧文件夹)
+        ├── 00ad5016a4/
+        └── ...
 ```
 
-如果您希望显式覆盖 GPU 数量或精度设置，可以使用命令行参数：
+---
 
-```bash
-accelerate launch \
-  --num_processes 8 \
-  --mixed_precision fp16 \
-  train.py
-```
+## 📋 常见问题
 
-`accelerate` 将根据配置文件加上命令行标志，在节点上的每个 GPU 启动一个训练进程。
+**Q1: 下载数据太慢或失败？**
+* 脚本默认使用 Hugging Face 镜像。如果集群网络受限，请手动下载 `train.zip` 并解压到 `JPEGImages` 目录。
 
-### Slurm 作业脚本示例
-
-在 Slurm 作业脚本中，训练部分通常如下所示：
-
-```bash
-#SBATCH --gres=gpu:8
-#SBATCH --ntasks-per-node=8
-# ... 其他 Slurm 选项 ...
-
-source ~/.bashrc
-conda activate fff-vdi
-cd /path/to/FFF-VDI
-
-accelerate launch train.py
-```
-
-日志和检查点（Checkpoints）将根据 `config.yaml` 中的设置写入（默认为 `output_dir: "./output"`）。
+**Q2: 提示 `mkdir: cannot create directory`: Permission denied?**
+* 这说明您设置的 `DATA_ROOT_BASE` (如 `/gpfs/...`) 您没有写入权限。
+* 请修改 `.sbatch` 和 `config.yaml`，将路径指向您的用户目录（如 `/home/username/data` 或 `/scratch/username/data`）。
