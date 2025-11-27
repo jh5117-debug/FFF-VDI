@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 集群专用版：下载 YouTube-VOS 2019 (使用公共镜像，无需登录)
+# 集群专用版：从你自己的 Hugging Face 数据集下载 YouTube-VOS 2019 train.tar
 # 用法：bash scripts/download_youtubevos_2019.sh /gpfs/data/YouTubeVOS
 
 set -e
@@ -13,9 +13,9 @@ fi
 DATA_ROOT="$1"
 
 # ================= 配置区域 =================
-# 使用 Hugging Face 上的公共数据集镜像，包含 train.zip
-REPO_ID="ecoz/YouTube-VOS-2019"
-FILENAME="train.zip"
+# ✅ 用你自己的仓库 + 文件名
+REPO_ID="JiaHuang01/YouTube-VOS_2019"
+FILENAME="train.tar"
 # ===========================================
 
 # 目标结构：DATA_ROOT/youtube-vos/JPEGImages
@@ -24,51 +24,64 @@ TARGET_DIR="${YTVOS_DIR}/JPEGImages"
 
 echo "[download_hf] Target Root: ${DATA_ROOT}"
 
-# 1. 检查是否存在
-if [ -d "${TARGET_DIR}" ] && [ "$(ls -A ${TARGET_DIR})" ]; then
-    echo "[download_hf] Data already exists at ${TARGET_DIR}. Skipping."
-    exit 0
+# 1. 如果已经有数据就直接跳过
+if [ -d "${TARGET_DIR}" ] && [ "$(ls -A "${TARGET_DIR}")" ]; then
+  echo "[download_hf] Data already exists at ${TARGET_DIR}. Skipping."
+  exit 0
 fi
 
 mkdir -p "${DATA_ROOT}"
 cd "${DATA_ROOT}"
 
-# 2. 检查工具 (Admin 可能没装 hf cli)
-if ! command -v huggingface-cli >/dev/null 2>&1; then
-    echo "[download_hf] Installing huggingface_hub..."
-    pip install "huggingface_hub[cli]"
+# 2. 安装 CLI（如果没有）
+if ! command -v huggingface-cli >/dev/null 2>&1 && ! command -v hf >/dev/null 2>&1; then
+  echo "[download_hf] Installing huggingface_hub..."
+  pip install "huggingface_hub[cli]"
 fi
 
-# 3. 下载 (使用公共源，不需要 login)
-echo "[download_hf] Downloading ${FILENAME} from public mirror ${REPO_ID}..."
-huggingface-cli download --repo-type dataset ${REPO_ID} ${FILENAME} --local-dir . --local-dir-use-symlinks False
+# 3. 确保已经登录（因为你的仓库是 private）
+# 只需要在某台机子手动执行一次：
+#   huggingface-cli login
+# 然后这里就能直接用已经保存的 token 访问
 
-# 4. 解压
-echo "[download_hf] Extracting..."
-unzip -q -o ${FILENAME}
+echo "[download_hf] Downloading ${FILENAME} from ${REPO_ID} ..."
+# 用新版 hf 命令，旧的 huggingface-cli download 也能用
+if command -v hf >/dev/null 2>&1; then
+  hf download "${REPO_ID}" "${FILENAME}" \
+    --repo-type dataset \
+    --local-dir . \
+    --local-dir-use-symlinks False
+else
+  huggingface-cli download \
+    --repo-type dataset "${REPO_ID}" "${FILENAME}" \
+    --local-dir . --local-dir-use-symlinks False
+fi
 
-# 5. 整理目录结构 (Cluster Standard)
-# 无论解压出来是什么，最终都要变成 youtube-vos/JPEGImages
-echo "[download_hf] Organizing directory structure..."
+# 4. 解压 train.tar
+echo "[download_hf] Extracting ${FILENAME} ..."
+tar -xf "${FILENAME}"
+
+# 5. 整理目录结构
+echo "[download_hf] Organizing directory structure ..."
 
 mkdir -p "${YTVOS_DIR}"
 
-# 情况A: 解压出 train/JPEGImages (常见)
+# 下面这几种情况你选一种保持即可：
+# 如果 train.tar 里面是 train/JPEGImages/...
 if [ -d "train/JPEGImages" ]; then
-    mv train/JPEGImages "${YTVOS_DIR}/"
-    rm -rf train
-# 情况B: 解压出 JPEGImages (直接在根目录)
+  mv train/JPEGImages "${YTVOS_DIR}/"
+  rm -rf train
+# 如果里面直接是 JPEGImages/...
 elif [ -d "JPEGImages" ]; then
-    mv JPEGImages "${YTVOS_DIR}/"
+  mv JPEGImages "${YTVOS_DIR}/"
 fi
 
-# 清理
-rm -f ${FILENAME}
+rm -f "${FILENAME}"
 
 # 6. 验证
 if [ -d "${TARGET_DIR}" ]; then
-    echo "[download_hf] Success! Data is ready at: ${TARGET_DIR}"
+  echo "[download_hf] Success! Data is ready at: ${TARGET_DIR}"
 else
-    echo "[download_hf] Error: Directory organization failed."
-    exit 1
+  echo "[download_hf] Error: Directory organization failed."
+  exit 1
 fi
