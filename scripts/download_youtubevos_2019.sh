@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# 集群专用版：从你自己的 Hugging Face 数据集下载 YouTube-VOS 2019 train.tar
+# 集群/服务器专用版：从你自己的 Hugging Face 数据集下载 YouTube-VOS 2019 train.tar
 # 用法：bash scripts/download_youtubevos_2019.sh /gpfs/data/YouTubeVOS
+# 运行前请先在本机执行一次： huggingface-cli login
 
 set -e
 
@@ -33,29 +34,18 @@ fi
 mkdir -p "${DATA_ROOT}"
 cd "${DATA_ROOT}"
 
-# 2. 安装 CLI（如果没有）
-if ! command -v huggingface-cli >/dev/null 2>&1 && ! command -v hf >/dev/null 2>&1; then
+# 2. 安装 huggingface_cli（如果没有）
+if ! command -v huggingface-cli >/dev/null 2>&1; then
   echo "[download_hf] Installing huggingface_hub..."
   pip install "huggingface_hub[cli]"
 fi
 
-# 3. 确保已经登录（因为你的仓库是 private）
-# 只需要在某台机子手动执行一次：
-#   huggingface-cli login
-# 然后这里就能直接用已经保存的 token 访问
-
+# 3. 下载（你的仓库是 private，所以要提前 huggingface-cli login 过）
 echo "[download_hf] Downloading ${FILENAME} from ${REPO_ID} ..."
-# 用新版 hf 命令，旧的 huggingface-cli download 也能用
-if command -v hf >/dev/null 2>&1; then
-  hf download "${REPO_ID}" "${FILENAME}" \
-    --repo-type dataset \
-    --local-dir . \
-    --local-dir-use-symlinks False
-else
-  huggingface-cli download \
-    --repo-type dataset "${REPO_ID}" "${FILENAME}" \
-    --local-dir . --local-dir-use-symlinks False
-fi
+huggingface-cli download \
+  --repo-type dataset "${REPO_ID}" "${FILENAME}" \
+  --local-dir . \
+  --local-dir-use-symlinks False
 
 # 4. 解压 train.tar
 echo "[download_hf] Extracting ${FILENAME} ..."
@@ -66,22 +56,22 @@ echo "[download_hf] Organizing directory structure ..."
 
 mkdir -p "${YTVOS_DIR}"
 
-# 下面这几种情况你选一种保持即可：
-# 如果 train.tar 里面是 train/JPEGImages/...
+# 情况1: train.tar 里面是 train/JPEGImages/...
 if [ -d "train/JPEGImages" ]; then
   mv train/JPEGImages "${YTVOS_DIR}/"
   rm -rf train
-# 如果里面直接是 JPEGImages/...
+# 情况2: train.tar 里面直接是 JPEGImages/...
 elif [ -d "JPEGImages" ]; then
   mv JPEGImages "${YTVOS_DIR}/"
 fi
 
+# 删除压缩包
 rm -f "${FILENAME}"
 
-# 6. 验证
+# 6. 最终验证
 if [ -d "${TARGET_DIR}" ]; then
-  echo "[download_hf] Success! Data is ready at: ${TARGET_DIR}"
+  echo "[download_hf] ✅ Success! Data is ready at: ${TARGET_DIR}"
 else
-  echo "[download_hf] Error: Directory organization failed."
+  echo "[download_hf] ❌ Error: Directory organization failed."
   exit 1
 fi
