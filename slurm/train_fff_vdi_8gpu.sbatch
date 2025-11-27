@@ -1,51 +1,60 @@
 #!/bin/bash
-#SBATCH --job-name=fffvdi_train        # 周哥可改
-#SBATCH --partition=gpu               # 周哥可改
+#SBATCH --job-name=fffvdi_train
+#SBATCH --partition=gpu           # 管理员根据集群实际情况修改
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=8           # 8 个进程，对应 8 张 GPU
-#SBATCH --gres=gpu:8                  # 申请 8 张 GPU
+#SBATCH --ntasks-per-node=8       # 8进程
+#SBATCH --gres=gpu:8              # 8张卡
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=200G
 #SBATCH --time=72:00:00
-#SBATCH --output=logs/%x-%j.out       # 日志文件
+#SBATCH --output=logs/%x-%j.out
 
 set -e
 
-######## 1. 加载 shell 环境 ########
+# =========================================================
+# 1. 环境初始化
+# =========================================================
 source ~/.bashrc
 
-######## 2. 如果环境不存在，则自动构建 ########
-# （setup_env.sh 现在是可重复执行的，多次跑也没问题）
-echo "[FFF-VDI] Checking conda env fff-vdi ..."
+echo "[SLURM] Job ID: $SLURM_JOB_ID"
+echo "[SLURM] Node: $(hostname)"
+
+# 检查并自动创建环境
+echo "[SLURM] Checking conda environment..."
 if ! conda env list | awk '{print $1}' | grep -qx "fff-vdi"; then
-  echo "[FFF-VDI] Conda env fff-vdi not found, running scripts/setup_env.sh ..."
+  echo "[SLURM] Environment 'fff-vdi' not found. Creating it now..."
   bash scripts/setup_env.sh
 else
-  echo "[FFF-VDI] Conda env fff-vdi already exists."
+  echo "[SLURM] Environment 'fff-vdi' found."
 fi
 
-# 无论是否刚刚创建，都激活一次
 conda activate fff-vdi
 
-######## 3. 数据集检查 & 自动下载 ########
-# 这里约定数据根目录，和 config.yaml 里的 data_root 对应
-DATA_ROOT=/gpfs/data/YouTubeVOS
-YTVOS_JPEGS=${DATA_ROOT}/youtube-vos/JPEGImages
+# =========================================================
+# 2. 数据准备 (自动下载)
+# =========================================================
+# 定义数据存放的根目录 (与 config.yaml 对应)
+# 脚本会自动下载到 /gpfs/data/YouTubeVOS/youtube-vos/JPEGImages
+DATA_ROOT_BASE="/gpfs/data/YouTubeVOS"
+TARGET_PATH="${DATA_ROOT_BASE}/youtube-vos/JPEGImages"
 
-if [ ! -d "${YTVOS_JPEGS}" ]; then
-  echo "[FFF-VDI] YouTube-VOS not found at ${YTVOS_JPEGS}, start downloading..."
-  bash scripts/download_youtubevos_2019.sh "${DATA_ROOT}"
+echo "[SLURM] Checking dataset at ${TARGET_PATH}..."
+if [ ! -d "${TARGET_PATH}" ]; then
+  echo "[SLURM] Dataset not found. Launching download script..."
+  bash scripts/download_youtubevos_2019.sh "${DATA_ROOT_BASE}"
 else
-  echo "[FFF-VDI] Found YouTube-VOS at ${YTVOS_JPEGS}, skip download."
+  echo "[SLURM] Dataset found. Skipping download."
 fi
 
-######## 4. 切到项目目录 ########
-# 建议让周哥在仓库根目录下 sbatch，这样可以直接用 SLURM_SUBMIT_DIR
+# =========================================================
+# 3. 启动训练
+# =========================================================
+# 确保在提交目录 (项目根目录)
 cd "${SLURM_SUBMIT_DIR}"
 
-######## 5. (可选) accelerate config，只需首次手动跑一次 ########
-# accelerate config
+echo "[SLURM] Starting training..."
+# accelerate config 通常不需要在脚本里跑，默认配置或命令行参数即可
+# 这里直接启动，accelerate 会自动检测 8 卡环境
+accelerate launch --multi_gpu --num_processes=8 train.py
 
-######## 6. 启动训练 ########
-echo "[FFF-VDI] Start training with accelerate ..."
-accelerate launch train.py
+echo "[SLURM] Training finished."
