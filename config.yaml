@@ -1,21 +1,24 @@
 pretrained_model_name_or_path: "stabilityai/stable-video-diffusion-img2vid-xt-1-1"
 
 # dataset
-data_root: "/gpfs/data/YouTubeVOS/youtube-vos/JPEGImages" #改成您的真实路经
+# 【修改点1】改为你的本地真实路径
+data_root: "/home/hj/data/ytvos/JPEGImages"
 width: 512
 height: 256
-num_frames: 25
+# 【修改点2】3090 显存优化：从 25 降到 14，防止 OOM
+num_frames: 14
 
 # training parameters
 seed: 123
 per_gpu_batch_size: 1
 learning_rate: 0.00001 # 1e-5
-max_train_steps: 100000
-validation_steps: 1000
-mixed_precision: "fp16"
 
-# logging
-validation_steps: 1000
-checkpointing_steps: 1000
+# 【修改点3】测试运行：只跑 200 步验证代码是否跑通 (原值 100000 太久了)
+max_train_steps: 200
+validation_steps: 50
+checkpointing_steps: 200
+
+mixed_precision: "fp16"
 checkpoints_total_limit: 1
-output_dir: "./output"
+# 【修改点4】输出目录可以改个测试用的名字
+output_dir: "./output_debug"
