@@ -9,7 +9,7 @@
 
 ### 1. 克隆代码
 ```bash
-git clone [https://github.com/jh5117-debug/FFF-VDI.git](https://github.com/jh5117-debug/FFF-VDI.git)
+git clone https://github.com/jh5117-debug/FFF-VDI.git
 cd FFF-VDI
 ```
 
