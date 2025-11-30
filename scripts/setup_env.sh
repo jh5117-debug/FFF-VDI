@@ -36,3 +36,52 @@ if [ ! -f "${REQ_FLAG}" ]; then
 else
   echo "[Setup] Dependencies already installed (Flag found)."
 fi
+
+########################################
+# 4. 准备权重目录
+########################################
+WEIGHTS_DIR="$(pwd)/weights"
+if [ ! -d "${WEIGHTS_DIR}" ]; then
+  echo "[Setup] Creating weights directory at ${WEIGHTS_DIR}..."
+  mkdir -p "${WEIGHTS_DIR}"
+fi
+
+########################################
+# 5. 下载 RAFT 权重（如有必要）
+########################################
+RAFT_WEIGHTS="${WEIGHTS_DIR}/raft-things.pth"
+
+if [ ! -f "${RAFT_WEIGHTS}" ]; then
+  echo "[Setup] Downloading RAFT weights to ${RAFT_WEIGHTS}..."
+  if command -v curl >/dev/null 2>&1; then
+    curl -L "https://huggingface.co/Iceclear/MGLD-VSR/resolve/main/raft-things.pth" \
+      -o "${RAFT_WEIGHTS}"
+    echo "[Setup] RAFT weights downloaded."
+  else
+    echo "[Setup][WARNING] 'curl' not found. Please manually download:"
+    echo "  https://huggingface.co/Iceclear/MGLD-VSR/resolve/main/raft-things.pth"
+    echo "and place it at: ${RAFT_WEIGHTS}"
+  fi
+else
+  echo "[Setup] RAFT weights already exist: ${RAFT_WEIGHTS}"
+fi
+
+########################################
+# 6. 下载 Flow Completion 权重（如有必要）
+########################################
+FLOWCOMP_WEIGHTS="${WEIGHTS_DIR}/recurrent_flow_completion.pth"
+
+if [ ! -f "${FLOWCOMP_WEIGHTS}" ]; then
+  echo "[Setup] Downloading Flow Completion weights to ${FLOWCOMP_WEIGHTS}..."
+  if command -v curl >/dev/null 2>&1; then
+    curl -L "https://github.com/sczhou/ProPainter/releases/download/v0.1.0/recurrent_flow_completion.pth" \
+      -o "${FLOWCOMP_WEIGHTS}"
+    echo "[Setup] Flow Completion weights downloaded."
+  else
+    echo "[Setup][WARNING] 'curl' not found. Please manually download:"
+    echo "  https://github.com/sczhou/ProPainter/releases/download/v0.1.0/recurrent_flow_completion.pth"
+    echo "and place it at: ${FLOWCOMP_WEIGHTS}"
+  fi
+else
+  echo "[Setup] Flow Completion weights already exist: ${FLOWCOMP_WEIGHTS}"
+fi
