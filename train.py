@@ -936,7 +936,7 @@ def main():
                         accelerator.save_state(save_path)
                         logger.info(f"Saved state to {save_path}")
                     # sample images!
-                    if ((global_step % args.validation_steps == 0) or (global_step == 1)):
+                    if False and ((global_step % args.validation_steps == 0) or (global_step == 1)):
                         logger.info(f"Running validation... \n Generating {args.num_validation_images} videos.")
                         # create pipeline
                         # The models need unwrapping because for compatibility in distributed training mode.
