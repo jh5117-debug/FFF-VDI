@@ -1,21 +1,26 @@
-#使用A100进行train
+#使用3090测试能不能 run 
+
 
 pretrained_model_name_or_path: "stabilityai/stable-video-diffusion-img2vid-xt-1-1"
+
 # dataset
 # 【关键】恢复为集群通用路径，与 Slurm 脚本里的逻辑对应
-data_root: "/sc-projects/sc-proj-cc09-repair/hongyou/dev/data/youtube-vos/JPEGImages"
+data_root: "/gpfs/data/YouTubeVOS/youtube-vos/JPEGImages"
 width: 512
 height: 256
 # 【关键】A100/H100 显存大，恢复为 25 帧
 num_frames: 25
+
 # training parameters
 seed: 123
 per_gpu_batch_size: 1
 learning_rate: 0.00001 # 1e-5
+
 # 【关键】恢复为正式训练步数 (10万步)
 max_train_steps: 100000
 validation_steps: 1000
 mixed_precision: "fp16"
+
 # logging
 validation_steps: 1000
 checkpointing_steps: 1000
