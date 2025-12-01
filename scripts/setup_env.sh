@@ -4,7 +4,7 @@ set -e
 # 一键创建并安装训练环境（可重复执行）
 
 ENV_NAME=fff-vdi
-REQ_FLAG="$HOME/.fff_vdi_requirements_installed"
+REQ_FLAG="$PROJECT_HOME/.fff_vdi_requirements_installed"
 
 # 确保 conda 命令可用
 source ~/.bashrc
